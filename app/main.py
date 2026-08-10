@@ -13,12 +13,12 @@ import time
 import uuid
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response as StarletteResponse
 
 from app.api.routers import health, tasks
 from app.core.config import settings
+from app.core.exceptions import register_exception_handlers
 from app.core.rate_limit import rate_limit_middleware
 
 # ---------------------------------------------------------------------------
@@ -50,24 +50,37 @@ class RateLimitStarletteMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         logger.warning(
-            "rate_limited ip=%s path=%s retry_after=%ss",
-            client_ip,
+            "req=%s %s %s ip=%s 429 限流触发 retry_after=%ss",
+            getattr(request.state, "request_id", "unknown"),
+            request.method,
             request.url.path,
+            client_ip,
             retry_after,
         )
+        from fastapi.responses import JSONResponse
+
         resp = JSONResponse(
             status_code=429,
-            content={"detail": "请求过于频繁，请稍后再试"},
+            content={
+                "detail": "请求过于频繁，请稍后再试",
+                "request_id": getattr(request.state, "request_id", None),
+            },
         )
         resp.headers["Retry-After"] = str(retry_after)
         return resp
 
 
 # ---------------------------------------------------------------------------
-# 中间件：请求日志 + 请求 ID + 耗时追踪
+# 中间件：请求日志 + 请求 ID + 耗时追踪 + 客户端 IP + 状态码分级
 # ---------------------------------------------------------------------------
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """记录每个请求的方法、路径、状态码与耗时。"""
+    """记录每个请求的方法、路径、状态码、耗时、客户端 IP。
+
+    根据响应状态码分级记录日志：
+        2xx / 3xx -> INFO
+        4xx       -> WARNING
+        5xx       -> ERROR
+    """
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
@@ -75,44 +88,29 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         request_id = uuid.uuid4().hex[:8]
         started = time.perf_counter()
 
-        # 将 request_id 放入 state，供路由内日志引用
+        # 将 request_id 放入 state，供路由/异常处理器日志引用
         request.state.request_id = request_id
+        client_ip = request.client.host if request.client else "unknown"
 
         response = await call_next(request)
 
         duration_ms = (time.perf_counter() - started) * 1000
-        logger.info(
-            "req=%s %s %s -> %d (%.1fms)",
-            request_id,
-            request.method,
-            request.url.path,
-            response.status_code,
-            duration_ms,
+        status_code = response.status_code
+
+        log_msg = (
+            "req=%s %s %s ip=%s -> %d (%.1fms)"
+            % (request_id, request.method, request.url.path, client_ip, status_code, duration_ms)
         )
+
+        if status_code >= 500:
+            logger.error(log_msg)
+        elif status_code >= 400:
+            logger.warning(log_msg)
+        else:
+            logger.info(log_msg)
+
         response.headers["X-Request-ID"] = request_id
         return response
-
-
-# ---------------------------------------------------------------------------
-# 全局异常处理器
-# ---------------------------------------------------------------------------
-async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """捕获未处理异常，返回统一 500 响应并记录错误日志。"""
-    request_id = getattr(request.state, "request_id", "unknown")
-    logger.error(
-        "req=%s unhandled exception: %s: %s",
-        request_id,
-        type(exc).__name__,
-        str(exc),
-        exc_info=True,
-    )
-    return JSONResponse(
-        status_code=500,
-        content={
-            "detail": "内部服务器错误",
-            "request_id": request_id,
-        },
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -132,8 +130,8 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(RateLimitStarletteMiddleware)
 
-    # 异常处理器
-    app.add_exception_handler(Exception, global_exception_handler)
+    # 异常处理器（统一错误响应格式 + 分级日志）
+    register_exception_handlers(app)
 
     # 路由
     app.include_router(health.router)
