@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-manager-api
+  namespace: task-manager
+  labels:
+    app.kubernetes.io/name: task-manager-api
+    app.kubernetes.io/part-of: task-manager
+    app.kubernetes.io/version: "0.1.0"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: task-manager-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: task-manager-api
+        app.kubernetes.io/part-of: task-manager
+        app.kubernetes.io/version: "0.1.0"
+      annotations:
+        # 注入 ConfigMap 变更后自动滚动重启
+        configmap/revision: "v1"
+    spec:
+      # Docker Desktop 内置 K8s 与宿主机共享 Docker 守护进程
+      # 镜像已在宿主机 Docker 中直接可用，无需远程拉取
+      containers:
+        - name: task-manager-api
+          image: task-manager-api:slim
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          # 环境变量：大部分来自 ConfigMap，少部分硬编码
+          envFrom:
+            - configMapRef:
+                name: task-manager-api-config
+                # ConfigMap 中缺失的键不会报错，而是使用容器内默认值
+                optional: true
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: PYTHONPATH
+              value: "/app"
+          # 资源限制（CPU: 100m-200m，Memory: 128Mi-256Mi）
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          # 就绪探针 —— 流量准入前必须通过
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+          # 存活探针 —— 故障自动重启
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
