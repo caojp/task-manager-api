@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-manager-api
+  namespace: task-manager
+  labels:
+    app.kubernetes.io/name: task-manager-api
+    app.kubernetes.io/part-of: task-manager
+spec:
+  # ClusterIP 类型 —— 集群内部访问
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: task-manager-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+  # 会话亲和性（可选，适合后续引入有状态组件）
+  sessionAffinity: None

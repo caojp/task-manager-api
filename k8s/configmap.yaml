@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task-manager-api-config
+  namespace: task-manager
+  labels:
+    app.kubernetes.io/name: task-manager-api
+data:
+  # 非敏感配置项 —— 可通过环境变量注入容器
+  APP_HOST: "0.0.0.0"
+  APP_PORT: "8080"
+  APP_DEBUG: "false"
+  # 日志级别 (INFO / DEBUG / WARNING / ERROR)
+  LOG_LEVEL: "INFO"
+  # 限流配置
+  APP_RATE_LIMIT_ENABLED: "true"
+  APP_RATE_LIMIT_REQUESTS: "100"
+  APP_RATE_LIMIT_WINDOW_SECONDS: "60"
+  # 服务元数据
+  APP_NAME: "Task Manager API"
+  APP_VERSION: "0.1.0"

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-ingress-controller-conf
+  namespace: ingress-nginx
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/component: controller
+data:
+  # 允许挂载本地自建 Registry 的镜像
+  allow-snippet-annotations: "true"
+  # 请求体大小
+  proxy-body-size: "16m"
