@@ -114,11 +114,11 @@ async def starlette_http_exception_handler(
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """捕获所有未处理异常，返回统一 500 响应并记录错误日志（含堆栈）。"""
     request_id = _get_request_id(request)
-    logger.error(
-        "%s 500 未捕获异常: %s: %s",
+    # 记录带堆栈的错误日志
+    logger.exception(
+        "%s 500 未捕获异常: %s",
         _log_context(request),
         type(exc).__name__,
-        str(exc),
     )
     body = ErrorResponse(
         detail="内部服务器错误",

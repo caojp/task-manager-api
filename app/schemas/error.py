@@ -14,7 +14,9 @@ from pydantic import BaseModel, Field
 class ErrorDetail(BaseModel):
     """单条校验错误详情（用于 422 输入校验）。"""
 
-    loc: list[str] = Field(..., description="错误位置（如 [body, title]）")
+    loc: list[str | int] = Field(
+        ..., description="错误位置（如 [body, title] 或 [body, 0, field]）"
+    )
     msg: str = Field(..., description="错误信息")
     type: str = Field(..., description="错误类型标识")
 
