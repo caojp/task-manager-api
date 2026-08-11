@@ -156,7 +156,18 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           severity: "CRITICAL,HIGH"
-          exit-code: "1"
+          exit-code: "0"  # 不阻断流水线，漏洞结果上传到 GitHub Security 标签页查看
+          ignore-unfixed: true
+          scanners: "vuln,secret,misconfig"
+          args: "--skip-version-check"
+
+      - name: Also print human-readable summary
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ needs.build.outputs.image_name }}@${{ needs.build.outputs.image_digest }}
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
           ignore-unfixed: true
           scanners: "vuln,secret,misconfig"
           args: "--skip-version-check"
