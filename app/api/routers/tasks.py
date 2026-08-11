@@ -77,9 +77,7 @@ async def create_task(data: TaskCreate) -> TaskResponse:
     summary="更新任务",
     description="根据 UUID 更新任务内容。支持部分更新（仅提供需要修改的字段）。",
 )
-async def update_task(
-    task_id: uuid.UUID, data: TaskUpdate
-) -> TaskResponse:
+async def update_task(task_id: uuid.UUID, data: TaskUpdate) -> TaskResponse:
     """更新任务。"""
     task = task_repository.update(task_id, data)
     if task is None:

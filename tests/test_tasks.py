@@ -62,9 +62,7 @@ def test_create_task_validation_empty_title() -> None:
 
 def test_create_task_validation_invalid_status() -> None:
     """非法 status 值应返回 422。"""
-    response = client.post(
-        "/tasks", json={"title": "Bad", "status": "invalid"}
-    )
+    response = client.post("/tasks", json={"title": "Bad", "status": "invalid"})
     assert response.status_code == 422
 
 
@@ -85,9 +83,7 @@ def test_list_tasks_after_create() -> None:
 
 def test_get_task_by_id() -> None:
     """根据 ID 获取存在的任务应返回 200。"""
-    create_resp = client.post(
-        "/tasks", json={"title": "可获取任务"}
-    )
+    create_resp = client.post("/tasks", json={"title": "可获取任务"})
     task_id = create_resp.json()["id"]
     response = client.get(f"/tasks/{task_id}")
     assert response.status_code == 200
@@ -135,9 +131,7 @@ def test_update_task_partial() -> None:
         json={"title": "部分更新", "description": "保留我", "status": "todo"},
     )
     task_id = create_resp.json()["id"]
-    response = client.put(
-        f"/tasks/{task_id}", json={"status": "done"}
-    )
+    response = client.put(f"/tasks/{task_id}", json={"status": "done"})
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "部分更新"
@@ -151,9 +145,7 @@ def test_update_task_updates_timestamp() -> None:
     task_id = create_resp.json()["id"]
     original_updated_at = create_resp.json()["updated_at"]
 
-    response = client.put(
-        f"/tasks/{task_id}", json={"title": "时间戳测试-已更新"}
-    )
+    response = client.put(f"/tasks/{task_id}", json={"title": "时间戳测试-已更新"})
     assert response.status_code == 200
     assert response.json()["updated_at"] != original_updated_at
 
@@ -161,9 +153,7 @@ def test_update_task_updates_timestamp() -> None:
 def test_update_task_not_found() -> None:
     """更新不存在的任务应返回 404。"""
     fake_id = str(uuid.uuid4())
-    response = client.put(
-        f"/tasks/{fake_id}", json={"title": "不会成功"}
-    )
+    response = client.put(f"/tasks/{fake_id}", json={"title": "不会成功"})
     assert response.status_code == 404
 
 
@@ -171,9 +161,7 @@ def test_update_task_validation() -> None:
     """更新时非法 status 应返回 422。"""
     create_resp = client.post("/tasks", json={"title": "验证"})
     task_id = create_resp.json()["id"]
-    response = client.put(
-        f"/tasks/{task_id}", json={"status": "bad_status"}
-    )
+    response = client.put(f"/tasks/{task_id}", json={"status": "bad_status"})
     assert response.status_code == 422
 
 
@@ -199,9 +187,7 @@ def test_delete_task_not_found() -> None:
 
 def test_delete_task_then_get_404() -> None:
     """删除后再获取应返回 404。"""
-    create_resp = client.post(
-        "/tasks", json={"title": "删除后不可见"}
-    )
+    create_resp = client.post("/tasks", json={"title": "删除后不可见"})
     task_id = create_resp.json()["id"]
     client.delete(f"/tasks/{task_id}")
     response = client.get(f"/tasks/{task_id}")

@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -27,19 +27,19 @@ class ErrorResponse(BaseModel):
     - request_id 用于关联服务端日志，便于问题排查。
     """
 
-    detail: Union[str, list[ErrorDetail]] = Field(
+    detail: str | list[ErrorDetail] = Field(
         ...,
         description="错误详情：字符串或校验错误列表",
     )
-    request_id: Optional[str] = Field(
+    request_id: str | None = Field(
         default=None,
         description="请求追踪 ID，可用于关联服务端日志",
     )
 
     @classmethod
     def from_validation_error(
-        cls, errors: list[dict[str, Any]], request_id: Optional[str] = None
-    ) -> "ErrorResponse":
+        cls, errors: list[dict[str, Any]], request_id: str | None = None
+    ) -> ErrorResponse:
         """从 FastAPI 校验错误列表构造响应。"""
         details = [
             ErrorDetail(
