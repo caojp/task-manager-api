@@ -11,37 +11,37 @@ Task Manager API 提供标准 RESTful 风格的任务管理接口，支持任务
 - 统一的错误响应与请求级日志
 - 基于 IP 的速率限制（100 请求 / 60 秒）
 - 输入校验（Pydantic）与健康检查端点
-- 多阶段 Docker 构建（镜像 ~100MB），非 root 用户运行
+- 多阶段 Docker 构建（镜像 \~100MB），非 root 用户运行
 - Minikube 本地部署（2 副本 + 健康探针 + Ingress 路由）
 - GitHub Actions 流水线（Lint / Test / Build / Trivy 漏洞扫描）
 
 ## 技术栈说明
 
-| 类别 | 组件 | 版本 | 说明 |
-|------|------|------|------|
-| 语言 | Python | 3.11 | 运行时 / 开发基础 |
-| Web 框架 | FastAPI | 0.141.1 | ASGI，自动生成 OpenAPI |
-| 数据校验 | Pydantic / pydantic-settings | 2.x | 请求校验与环境配置 |
-| 限流 | limits | 3.x | Starlette 中间件实现 |
-| ASGI 服务器 | Uvicorn | 0.30+ | 生产 HTTP 服务器 |
-| 测试 | pytest + httpx | 8.x / 0.27+ | 单元测试 & TestClient |
-| 代码检查 | Ruff | 0.6+ | Lint + Format，替代 flake8 + black |
-| 类型检查 | mypy | 1.11+ | 可选静态类型检查 |
-| 容器 | Docker / Dockerfile 多阶段 | Alpine 3.11-slim 基础 | 最终镜像 ~100MB |
-| 安全扫描 | Trivy | - | CI 中扫描镜像漏洞 |
-| K8s | Minikube + NGINX Ingress | v1.35.x | 本地集群部署 |
-| CI | GitHub Actions | - | Lint → Test → Build → Scan |
+| 类别       | 组件                           | 版本                  | 说明                              |
+| -------- | ---------------------------- | ------------------- | ------------------------------- |
+| 语言       | Python                       | 3.11                | 运行时 / 开发基础                      |
+| Web 框架   | FastAPI                      | 0.141.1             | ASGI，自动生成 OpenAPI               |
+| 数据校验     | Pydantic / pydantic-settings | 2.x                 | 请求校验与环境配置                       |
+| 限流       | limits                       | 3.x                 | Starlette 中间件实现                 |
+| ASGI 服务器 | Uvicorn                      | 0.30+               | 生产 HTTP 服务器                     |
+| 测试       | pytest + httpx               | 8.x / 0.27+         | 单元测试 & TestClient               |
+| 代码检查     | Ruff                         | 0.6+                | Lint + Format，替代 flake8 + black |
+| 类型检查     | mypy                         | 1.11+               | 可选静态类型检查                        |
+| 容器       | Docker / Dockerfile 多阶段      | Alpine 3.11-slim 基础 | 最终镜像 \~100MB                    |
+| 安全扫描     | Trivy                        | -                   | CI 中扫描镜像漏洞                      |
+| K8s      | Minikube + NGINX Ingress     | v1.35.x             | 本地集群部署                          |
+| CI       | GitHub Actions               | -                   | Lint → Test → Build → Scan      |
 
 ## API 概览
 
-| 方法 | 路径 | 功能 | 状态码 |
-|------|------|------|--------|
-| GET | `/health` | 健康检查 | 200 |
-| GET | `/tasks` | 获取全部任务 | 200 |
-| GET | `/tasks/{id}` | 获取单个任务 | 200 / 404 |
-| POST | `/tasks` | 创建任务 | 201 / 422 |
-| PUT | `/tasks/{id}` | 更新任务 | 200 / 404 / 422 |
-| DELETE | `/tasks/{id}` | 删除任务 | 204 / 404 |
+| 方法     | 路径            | 功能     | 状态码             |
+| ------ | ------------- | ------ | --------------- |
+| GET    | `/health`     | 健康检查   | 200             |
+| GET    | `/tasks`      | 获取全部任务 | 200             |
+| GET    | `/tasks/{id}` | 获取单个任务 | 200 / 404       |
+| POST   | `/tasks`      | 创建任务   | 201 / 422       |
+| PUT    | `/tasks/{id}` | 更新任务   | 200 / 404 / 422 |
+| DELETE | `/tasks/{id}` | 删除任务   | 204 / 404       |
 
 所有错误响应统一格式：
 
@@ -59,7 +59,7 @@ OpenAPI 文档：启动服务后访问 `http://localhost:8080/docs`。
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/<your-username>/task-manager-api.git
+git clone https://github.com/<>/task-manager-api.git
 cd task-manager-api
 ```
 
@@ -254,28 +254,28 @@ curl http://localhost:8080/health
 
 ### 阶段与任务
 
-| 阶段 | Job | 任务 | 失败后行为 |
-|------|-----|------|-----------|
-| 1 | Lint | `ruff check` + `ruff format --check` | 阻止后续 Test/Build/Scan |
-| 2 | Test | `pytest tests/ -v` | 阻止后续 Build/Scan |
-| 3 | Build | 构建 Docker 镜像并推送到 GHCR，标签：`sha-<commit-sha>`、`latest`、分支名 | 阻止后续 Security Scan |
-| 4 | Security Scan | Trivy 扫描镜像漏洞（CRITICAL/HIGH），发现即失败；Sarif 报告上传 GitHub Security | 流水线失败 |
+| 阶段 | Job           | 任务                                                           | 失败后行为                |
+| -- | ------------- | ------------------------------------------------------------ | -------------------- |
+| 1  | Lint          | `ruff check` + `ruff format --check`                         | 阻止后续 Test/Build/Scan |
+| 2  | Test          | `pytest tests/ -v`                                           | 阻止后续 Build/Scan      |
+| 3  | Build         | 构建 Docker 镜像并推送到 GHCR，标签：`sha-<commit-sha>`、`latest`、分支名     | 阻止后续 Security Scan   |
+| 4  | Security Scan | Trivy 扫描镜像漏洞（CRITICAL/HIGH），发现即失败；Sarif 报告上传 GitHub Security | 流水线失败                |
 
 ### 镜像标签规范
 
 构建的镜像会推送到 GitHub Container Registry（GHCR）：
 
 ```
-ghcr.io/<your-username>/task-manager-api:sha-<short-sha>
-ghcr.io/<your-username>/task-manager-api:latest    # main 分支推送时
-ghcr.io/<your-username>/task-manager-api:<branch>
+ghcr.io/caojp/task-manager-api:sha-<short-sha>
+ghcr.io/caojp/task-manager-api:latest    # main 分支推送时
+ghcr.io/caojp/task-manager-api:<branch>
 ```
 
 ### CI 状态徽章
 
 本文档顶部的 Badge 指向默认分支 `main` 的最近一次流水线运行结果。
 
-> 提示：推送代码到 GitHub 后，把 README 中所有 `<your-username>` 替换为实际 GitHub 用户名即可正常显示徽章与链接。
+> 提示：推送代码到 GitHub 后，把 README 中所有 `caojp` 替换为实际 GitHub 用户名即可正常显示徽章与链接。
 
 ## 分支与 Commit 规范
 
