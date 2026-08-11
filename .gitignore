@@ -216,3 +216,34 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+env/
+*.env
+requirements-lock.txt
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*.swo
+
+# logs
+logs/
+*.log
+
+# Docker
+.docker-build-cache/
+*.tar
+minikube-cache/
+
+# Mac
+.DS_Store
+Thumbs.db
