@@ -1,4 +1,4 @@
-# Task Manager API
+﻿# Task Manager API
 
 [![CI](https://github.com/caojp/task-manager-api/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/caojp/task-manager-api/actions/workflows/ci.yml)
 
@@ -59,7 +59,7 @@ OpenAPI 文档：启动服务后访问 `http://localhost:8080/docs`。
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/<your-username>/task-manager-api.git
+git clone https://github.com/caojp/task-manager-api.git
 cd task-manager-api
 ```
 
@@ -266,16 +266,16 @@ curl http://localhost:8080/health
 构建的镜像会推送到 GitHub Container Registry（GHCR）：
 
 ```
-ghcr.io/<your-username>/task-manager-api:sha-<short-sha>
-ghcr.io/<your-username>/task-manager-api:latest    # main 分支推送时
-ghcr.io/<your-username>/task-manager-api:<branch>
+ghcr.io/caojp/task-manager-api:sha-<short-sha>
+ghcr.io/caojp/task-manager-api:latest    # main 分支推送时
+ghcr.io/caojp/task-manager-api:<branch>
 ```
 
 ### CI 状态徽章
 
 本文档顶部的 Badge 指向默认分支 `main` 的最近一次流水线运行结果。
 
-> 提示：推送代码到 GitHub 后，把 README 中所有 `<your-username>` 替换为实际 GitHub 用户名即可正常显示徽章与链接。
+> 提示：以上 Badge、克隆地址、GHCR 镜像路径均使用实际 GitHub 用户名 `caojp`，如需 fork 后自用，请将其替换为你自己的用户名。
 
 ## 分支与 Commit 规范
 
