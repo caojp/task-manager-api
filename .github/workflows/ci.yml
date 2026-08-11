@@ -123,7 +123,9 @@ jobs:
         run: echo "IMAGE_DIGEST=${{ steps.build.outputs.digest }}" >> "$GITHUB_ENV"
 
     outputs:
-      image_full_ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+      image_name: ${{ env.IMAGE_NAME }}
+      image_digest: ${{ steps.build.outputs.digest }}
+      image_tag_sha: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
 
   # ==========================================================================
   # Security Scan: Trivy 镜像漏洞扫描
@@ -139,16 +141,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Log in to GHCR (pull scanned image)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          image-ref: ${{ needs.build.outputs.image_name }}@${{ needs.build.outputs.image_digest }}
           format: sarif
           output: trivy-results.sarif
           severity: "CRITICAL,HIGH"
-          exit-code: "1"  # 发现高危漏洞时失败，阻止后续步骤
+          exit-code: "1"
           ignore-unfixed: true
           scanners: "vuln,secret,misconfig"
+          args: "--skip-version-check"
 
       - name: Upload Trivy scan results to GitHub Security
         if: always()  # 即使扫描失败也上传结果
