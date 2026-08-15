@@ -422,8 +422,7 @@ ghcr.io/caojp/task-manager-api:<branch>
 ### CI 状态徽章
 
 本文档顶部的 Badge 指向默认分支 `main` 的最近一次流水线运行结果。
-
-> 提示：以上 Badge、克隆地址、GHCR 镜像路径均使用实际 GitHub 用户名 `caojp`，如需 fork 后自用，请将其替换为你自己的用户名。
+提示：以上 Badge、克隆地址、GHCR 镜像路径均使用实际 GitHub 用户名 `caojp`，如需 fork 后自用，请将其替换为你自己的用户名。
 
 ## 分支与 Commit 规范
 
