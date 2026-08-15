@@ -9,7 +9,6 @@ from __future__ import annotations
 import threading
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
 
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 
@@ -40,7 +39,7 @@ class TaskRepository:
             self._tasks[task_id] = task
         return task
 
-    def get_by_id(self, task_id: uuid.UUID) -> Optional[TaskResponse]:
+    def get_by_id(self, task_id: uuid.UUID) -> TaskResponse | None:
         """根据 ID 获取单个任务，不存在返回 None。"""
         with self._lock:
             return self._tasks.get(task_id)
@@ -50,9 +49,7 @@ class TaskRepository:
         with self._lock:
             return list(self._tasks.values())
 
-    def update(
-        self, task_id: uuid.UUID, data: TaskUpdate
-    ) -> Optional[TaskResponse]:
+    def update(self, task_id: uuid.UUID, data: TaskUpdate) -> TaskResponse | None:
         """更新任务，不存在返回 None。仅更新提供的字段。"""
         with self._lock:
             existing = self._tasks.get(task_id)

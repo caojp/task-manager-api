@@ -54,7 +54,9 @@ def test_rate_limit_returns_429_with_retry_after() -> None:
         assert client.get("/health").status_code == 200
         # 第 3 次 -> 429
         resp = client.get("/health")
-        assert resp.status_code == 429, f"unexpected {resp.status_code}: {resp.content!r}"
+        assert resp.status_code == 429, (
+            f"unexpected {resp.status_code}: {resp.content!r}"
+        )
         data = resp.json()
         assert "detail" in data
         assert "请求过于频繁" in data["detail"]

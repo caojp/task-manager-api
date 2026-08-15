@@ -94,9 +94,7 @@ def test_422_empty_title_unified_format(client: TestClient) -> None:
 
 def test_422_invalid_status_enum_unified_format(client: TestClient) -> None:
     """非法 status 枚举值应返回 422。"""
-    resp = client.post(
-        "/tasks", json={"title": "测试", "status": "invalid_status"}
-    )
+    resp = client.post("/tasks", json={"title": "测试", "status": "invalid_status"})
     assert resp.status_code == 422
     body = resp.json()
     assert isinstance(body["detail"], list)
@@ -123,10 +121,25 @@ def test_422_title_too_long(client: TestClient) -> None:
 
 def test_422_description_too_long(client: TestClient) -> None:
     """description 超过 2000 字符应返回 422。"""
-    resp = client.post(
-        "/tasks", json={"title": "ok", "description": "x" * 2001}
-    )
+    resp = client.post("/tasks", json={"title": "ok", "description": "x" * 2001})
     assert resp.status_code == 422
+
+
+def test_422_loc_with_int_index_handled(client: TestClient) -> None:
+    """loc 含 int 索引（如 [body, 1]）不应导致 500。
+
+    回归测试：ErrorDetail.loc 原定义为 list[str]，当 FastAPI 校验
+    失败的 loc 包含 int（如 JSON 解析错误的字节偏移、数组索引）时，
+    构造 ErrorDetail 会二次抛出 ValidationError，把 422 变成 500。
+    """
+    from app.schemas.error import ErrorResponse
+
+    # 直接验证：loc 含 int 时能正常构造（不抛异常）
+    errors = [{"loc": ["body", 1], "msg": "test", "type": "test_error"}]
+    body = ErrorResponse.from_validation_error(errors, request_id="test-req")
+    assert body.detail[0].loc == ["body", 1]
+    dumped = body.model_dump()
+    assert dumped["detail"][0]["loc"] == ["body", 1]
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +212,9 @@ def test_request_log_emitted_at_info_for_success(
         resp = client.get("/health")
     assert resp.status_code == 200
     # 至少有一条包含 GET /health 的日志
-    health_logs = [r for r in caplog.records if "GET" in r.message and "/health" in r.message]
+    health_logs = [
+        r for r in caplog.records if "GET" in r.message and "/health" in r.message
+    ]
     assert len(health_logs) >= 1
     assert health_logs[-1].levelno == logging.INFO
 
@@ -277,8 +292,11 @@ def test_error_log_emitted_for_500_with_traceback(
             if r.levelno == logging.ERROR and "未捕获异常" in r.message
         ]
         assert len(error_logs) >= 1
-        # 应包含异常堆栈
-        assert error_logs[0].exc_info is not None
+        # 日志应包含异常类型，堆栈信息通过 exc_info 输出
+        assert "RuntimeError" in error_logs[0].message
+        # caplog.text 会包含完整的日志文本（含 exc_info 输出的堆栈）
+        full_log_text = caplog.text
+        assert "RuntimeError: 模拟内部错误" in full_log_text
     finally:
         tasks_router.task_repository.get_by_id = original  # type: ignore
 

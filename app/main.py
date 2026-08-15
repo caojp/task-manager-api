@@ -97,10 +97,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         duration_ms = (time.perf_counter() - started) * 1000
         status_code = response.status_code
 
-        log_msg = (
-            "req=%s %s %s ip=%s -> %d (%.1fms)"
-            % (request_id, request.method, request.url.path, client_ip, status_code, duration_ms)
-        )
+        log_msg = f"req={request_id} {request.method} {request.url.path} ip={client_ip} -> {status_code} ({duration_ms:.1f}ms)"
 
         if status_code >= 500:
             logger.error(log_msg)
@@ -143,7 +140,9 @@ def create_app() -> FastAPI:
         if not rate_limit_middleware.enabled
         else f"{settings.RATE_LIMIT_REQUESTS} req / {settings.RATE_LIMIT_WINDOW_SECONDS}s"
     )
-    logger.info("%s v%s 已就绪（限流策略: %s）", settings.NAME, settings.VERSION, limit_cfg)
+    logger.info(
+        "%s v%s 已就绪（限流策略: %s）", settings.NAME, settings.VERSION, limit_cfg
+    )
     return app
 
 

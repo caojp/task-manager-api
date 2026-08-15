@@ -60,9 +60,7 @@ async def validation_exception_handler(
 # ---------------------------------------------------------------------------
 # 2. HTTPException（业务层主动抛出的 4xx/5xx，如 404 任务不存在）
 # ---------------------------------------------------------------------------
-async def http_exception_handler(
-    request: Request, exc: HTTPException
-) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """统一处理 HTTPException，响应体加入 request_id。"""
     request_id = _get_request_id(request)
     status_code = exc.status_code
@@ -113,17 +111,14 @@ async def starlette_http_exception_handler(
 # ---------------------------------------------------------------------------
 # 4. 未捕获异常（500）
 # ---------------------------------------------------------------------------
-async def unhandled_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """捕获所有未处理异常，返回统一 500 响应并记录错误日志（含堆栈）。"""
     request_id = _get_request_id(request)
-    logger.error(
-        "%s 500 未捕获异常: %s: %s",
+    # 记录带堆栈的错误日志
+    logger.exception(
+        "%s 500 未捕获异常: %s",
         _log_context(request),
         type(exc).__name__,
-        str(exc),
-        exc_info=True,
     )
     body = ErrorResponse(
         detail="内部服务器错误",

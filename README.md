@@ -59,7 +59,7 @@ OpenAPI 文档：启动服务后访问 `http://localhost:8080/docs`。
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/<>/task-manager-api.git
+git clone https://github.com/caojp/task-manager-api.git
 cd task-manager-api
 ```
 
@@ -166,22 +166,43 @@ docker compose up --build
 ### 1. 启动集群并启用 Ingress
 
 ```bash
+# Linux / macOS
 minikube start --cpus=2 --memory=4096 --driver=docker
 minikube addons enable ingress
 ```
 
+```powershell
+# Windows PowerShell
+minikube.exe start --cpus=2 --memory=4096 --driver=docker
+minikube.exe addons enable ingress
+```
+
 ### 2. 将镜像加载到 Minikube
+
+#### Linux / macOS
 
 ```bash
 # 方式 A：使用 Minikube Docker 守护进程构建（推荐）
-eval $(minikube docker-env)          # Linux / macOS
-# minikube docker-env | Invoke-Expression   # Windows PowerShell
+eval $(minikube docker-env)
 docker build -t task-manager-api:slim .
-eval $(minikube docker-env -u)       # 取消绑定
+eval $(minikube docker-env -u)
 
 # 方式 B：在宿主机构建后导入
 docker build -t task-manager-api:slim .
 minikube image load task-manager-api:slim
+```
+
+#### Windows PowerShell
+
+```powershell
+# 方式 A：使用 Minikube Docker 守护进程构建（推荐）
+minikube.exe docker-env | Invoke-Expression
+docker build -t task-manager-api:slim D:\project\PycharmProjects\task-manager-api
+minikube.exe docker-env -u | Invoke-Expression
+
+# 方式 B：在宿主机构建后导入
+docker build -t task-manager-api:slim D:\project\PycharmProjects\task-manager-api
+minikube.exe image load task-manager-api:slim
 ```
 
 > Deployment 使用 `imagePullPolicy: Never`，确保 Kubernetes 只用本地镜像。
@@ -212,21 +233,31 @@ kubectl get all -n task-manager
 
 ### 5. 配置域名访问
 
+#### Linux / macOS
+
 ```bash
-# 获取 Minikube IP
-minikube ip
-# 假设输出 192.168.49.2
-
-# Linux / macOS
 echo "$(minikube ip) task-manager.local" | sudo tee -a /etc/hosts
+```
 
-# Windows (PowerShell 管理员)
-Add-Content C:\Windows\System32\drivers\etc\hosts "$(minikube ip) task-manager.local"
+#### Windows PowerShell（管理员权限）
+
+> ⚠️ **Windows + Docker driver 注意**：Minikube Docker driver 下，`minikube ip`（如 192.168.49.2）属于 Docker 内部网络，宿主机**无法直接 ping 通**。必须使用 `minikube tunnel` 桥接，并将域名解析到 `127.0.0.1` 而非 Minikube IP。
+
+```powershell
+# 1. 管理员 PowerShell 新开窗口，启动 tunnel（保持运行）
+minikube.exe tunnel
+
+# 2. 另一个终端，配置 hosts（指向 127.0.0.1，不是 minikube ip）
+Add-Content C:\Windows\System32\drivers\etc\hosts "127.0.0.1 task-manager.local"
+
+# 3. 验证域名解析
+ping task-manager.local    # 应解析到 127.0.0.1
 ```
 
 ### 6. 通过 Ingress 调用 API
 
 ```bash
+# Linux / macOS
 curl http://task-manager.local/health
 # {"status":"healthy"}
 
@@ -234,14 +265,131 @@ curl http://task-manager.local/tasks
 # []
 ```
 
-### 7. 快速端口转发（跳过 Ingress）
+```powershell
+# Windows PowerShell
+curl.exe http://task-manager.local/health
+curl.exe http://task-manager.local/tasks
+```
+
+### 7. Windows 环境下 POST 请求（中文 JSON）
+
+> ⚠️ **PowerShell curl.exe 编码陷阱**：Windows PowerShell 默认用 GBK 编码传递 `-d` 参数，而 FastAPI 按 UTF-8 解析 JSON，会导致中文 body 解析失败返回 500。**必须用文件方式发送 UTF-8 JSON**。
+
+```powershell
+# 方式 A：写入 UTF-8 文件后用 --data-binary 读取（推荐，100% 避免 encoding 问题）
+@'
+{"title":"完成作业提交","description":"整理 Task Manager API 作业并提交"}
+'@ | Out-File -FilePath D:\minikube\body.json -Encoding utf8 -NoNewline
+
+curl.exe -X POST http://task-manager.local/tasks `
+  -H "Content-Type: application/json" `
+  --data-binary "@D:\minikube\body.json"
+
+# 方式 B：用 PowerShell 原生 Invoke-RestMethod（自动 UTF-8，但需关闭 keep-alive）
+$body = @{ title = "完成作业提交"; description = "整理 Task Manager API 作业并提交" } | ConvertTo-Json
+Invoke-RestMethod -Method POST -Uri "http://task-manager.local/tasks" `
+  -ContentType "application/json; charset=utf-8" -Body $body `
+  -Headers @{ "Connection" = "close" }
+
+# 方式 C：纯英文 body（最简单，验证链路用）
+curl.exe -X POST http://task-manager.local/tasks `
+  -H "Content-Type: application/json" `
+  -d '{\"title\":\"test\",\"description\":\"test\"}'
+```
+
+### 8. 更新镜像后重新部署
+
+> ⚠️ **Windows 常见坑**：修改代码后必须**重新 build 镜像 + 强制 rollout**，否则 Pod 会复用旧镜像（因为 tag 没变）。
+
+```powershell
+# 1. 重新构建镜像（在 Minikube Docker 内）
+minikube.exe docker-env | Invoke-Expression
+docker build -t task-manager-api:slim D:\project\PycharmProjects\task-manager-api
+minikube.exe docker-env -u | Invoke-Expression
+
+# 2. 强制重启 deployment（创建新 Pod 使用新镜像）
+kubectl rollout restart deploy task-manager-api -n task-manager
+
+# 3. 等待新 Pod 就绪
+kubectl get pods -n task-manager -w
+
+# 4. 验证新代码生效（exec 进容器看文件）
+kubectl exec -n task-manager deploy/task-manager-api -- cat /app/app/schemas/error.py | Select-String "loc:"
+# 应看到: loc: list[str | int]
+```
+
+### 9. 快速端口转发（跳过 Ingress）
 
 ```bash
+# Linux / macOS
 kubectl port-forward -n task-manager svc/task-manager-api 8080:8080
 curl http://localhost:8080/health
 ```
 
-部署手册更多内容（更新、清理、故障排查）：[k8s/README.md](k8s/README.md)。
+```powershell
+# Windows PowerShell
+kubectl port-forward -n task-manager svc/task-manager-api 8080:8080
+# 另一个终端
+curl.exe http://localhost:8080/health
+```
+
+### 10. Windows 环境故障排查
+
+#### 问题 1：`ping 192.168.49.2` 超时
+
+**原因**：Minikube Docker driver 的 IP 在 Docker 内部网络，宿主机无法直连。
+
+**解决**：用 `minikube tunnel` 桥接，hosts 指向 `127.0.0.1`（见步骤 5）。
+
+#### 问题 2：`curl http://192.168.49.2/health` 返回 502
+
+**原因**：直接用 IP 访问没有 `Host: task-manager.local` 头，nginx ingress 无规则匹配。
+
+**解决**：用域名访问，或加 Host 头：
+```powershell
+curl.exe -H "Host: task-manager.local" http://192.168.49.2/health
+```
+
+#### 问题 3：POST 中文 body 返回 500
+
+**原因**：PowerShell curl.exe `-d` 参数用 GBK 编码，FastAPI 用 UTF-8 解析失败。
+
+**解决**：用文件方式发送（见步骤 7 方式 A）。
+
+#### 问题 4：ingress-nginx Pod `ImagePullBackOff`
+
+**原因**：阿里云镜像源缺少对应 SHA 的 tag。
+
+**解决**：去掉 digest，改用纯 tag：
+```powershell
+kubectl set image -n ingress-nginx deploy/ingress-nginx-controller `
+  controller=registry.cn-hangzhou.aliyuncs.com/google_containers/nginx-ingress-controller:v1.14.3
+```
+
+#### 问题 5：ingress-nginx Pod `FailedMount: secret "ingress-nginx-admission" not found`
+
+**原因**：admission-create Job 因镜像拉取失败，没生成 webhook 证书 secret。
+
+**解决**：删除卡住的 Job，手动创建 secret，删除 webhook 配置：
+```powershell
+kubectl delete -n ingress-nginx job ingress-nginx-admission-create ingress-nginx-admission-patch
+kubectl delete validatingwebhookconfiguration ingress-nginx-admission
+kubectl create secret generic ingress-nginx-admission -n ingress-nginx --from-literal=cert=dummy --from-literal=key=dummy
+kubectl delete -n ingress-nginx pod -l app.kubernetes.io/component=controller
+```
+
+#### 问题 6：ingress-nginx 反复重启（RBAC 权限不足）
+
+**原因**：默认 ClusterRole 缺少 `list secrets`、`list endpointslices`、`get nodes` 权限。
+
+**解决**：补全 RBAC：
+```powershell
+kubectl create clusterrole ingress-nginx-additional --verb=get,list,watch --resource=nodes,secrets,endpointslices.discovery.k8s.io
+kubectl create clusterrolebinding ingress-nginx-additional --clusterrole=ingress-nginx-additional --serviceaccount=ingress-nginx:ingress-nginx
+kubectl delete -n ingress-nginx pod -l app.kubernetes.io/component=controller
+```
+
+部署手册更多内容（更新、清理、配置校验）：[k8s/README.md](k8s/README.md)。
 
 ## CI/CD 流水线
 
@@ -274,8 +422,7 @@ ghcr.io/caojp/task-manager-api:<branch>
 ### CI 状态徽章
 
 本文档顶部的 Badge 指向默认分支 `main` 的最近一次流水线运行结果。
-
-> 提示：推送代码到 GitHub 后，把 README 中所有 `caojp` 替换为实际 GitHub 用户名即可正常显示徽章与链接。
+提示：以上 Badge、克隆地址、GHCR 镜像路径均使用实际 GitHub 用户名 `caojp`，如需 fork 后自用，请将其替换为你自己的用户名。
 
 ## 分支与 Commit 规范
 
@@ -325,7 +472,7 @@ replicaset.apps/task-manager-api-76d58dbff8     2         2         2       2m
 
 ```bash
 $ curl http://task-manager.local/health
-{"status":"healthy"}
+{"status":"healthy","service":"Task Manager API","version":"0.1.0","timestamp":"2026-08-11T10:11:45.535599Z"}
 
 $ curl -X POST http://task-manager.local/tasks \
   -H "Content-Type: application/json" \

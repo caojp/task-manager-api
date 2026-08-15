@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -28,7 +27,7 @@ class TaskBase(BaseModel):
         description="任务标题",
         examples=["完成项目文档"],
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         max_length=2000,
         description="任务描述",
@@ -47,9 +46,9 @@ class TaskCreate(TaskBase):
 class TaskUpdate(BaseModel):
     """PUT /tasks/{id} 请求体（全部可选，支持部分更新）。"""
 
-    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
-    description: Optional[str] = Field(default=None, max_length=2000)
-    status: Optional[TaskStatus] = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    status: TaskStatus | None = None
 
 
 class TaskResponse(TaskBase):
